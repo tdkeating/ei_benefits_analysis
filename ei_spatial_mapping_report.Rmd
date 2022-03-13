@@ -1,0 +1,638 @@
+---
+title: "Employment Insurance (EI) Benefits in Canada"
+author: "Taylor Keating"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+# Packages setup
+library(tidyverse)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+
+library(sp) # spplot()
+library(RColorBrewer)
+library(spdep) # for poly2nb() and nb2mat()  (creating neighbors/adajency matrix)
+library(rgdal) # for readOGR
+library(INLA)
+```
+
+# Introduction
+
+[Canada's Employment Insurance (EI) program](https://www.canada.ca/en/employment-social-development/programs/ei.html) provides income support on a temporary basis to unemployed workers and workers taking time off for specific events such as illness, pregnancy, and caring for a critically ill or injured person. Research has been done looking at an [overview of the effects of Canada's EI program](https://ruor.uottawa.ca/handle/10393/30513), suggesting that the program may redistribute funds spatially and may contribute to unstable seasonal labour.
+
+The purpose of this study is to further understand the distribution of individuals receiving Employment Insurance (EI) benefits in Canada in 2021. This study has two goals in particular; first to perform prevalence mapping of the proportion of individuals receiving EI benefits by census division, and secondly to determine whether this proportion is associated with certain census division - level covariates through spatial regression. This could help determine whether populations in certain census divisions of Canada are most affected by government restrictions and closures, such as those due to the COVID-19 pandemic.
+
+To simplify the analysis somewhat, this study will specifically be looking at the proportion of individuals aged 15 years and older receiving EI benefits by census division in the province of Saskatchewan in the month of January 2021. Saskatchewan is focused on since it is a province with 18 census divisions, contains both urban and rural areas, but does not have an overwhelming population center like the Greater Toronto Area in Ontario. As well, January 2021 is chosen since this was in the middle of the second wave of the COVID-19 pandemic, but after the closure of other federal COVID-19 income support programs such as the [Canada Emergency Response Benefit (CERB)](https://www.canada.ca/en/revenue-agency/services/benefits/apply-for-cerb-with-cra.html) (closed December 2, 2020) and the [Canada Recovery Benefit CRB](https://www.canada.ca/en/revenue-agency/services/benefits/recovery-benefit.html) (closed December 23, 2021).
+
+# Data Sources
+
+This study will be using counts of individuals receiving EI benefits by census division, monthly, in Canada. These counts are also grouped by sex and age-group stratum, with sexes of males and females, and age-groups of 15-24 years, 25-54 years, and 55 years and older. This count data is obtained through [Statistics Canada- Employment Insurance Statistics (EIS)](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410032301). This data is on all individuals aged 15 years and older who received EI income benefits of any type. This is a census with a cross-sectional design, where data is collected for all units of the target population, so a full enumeration of EI benefit counts is assumed.
+
+Next, population level-data by census division are obtained from the [2016 Statistics Canada Census](https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/details/page.cfm?Lang=E&Geo1=PR&Code1=01&Geo2=PR&Code2=01&Data=Count&SearchText=01&SearchType=Begins&SearchPR=01&B1=All&Custom=&TABID=3). This contains information on the underlying population count of individuals aged 15 years and older by census division from the 2016 census. These underlying population counts by census division are also obtained in sex / age-group stratum in the same way as the EI benefits count data. Note that population counts have changed from 2016 to 2022, but this will still be used as a population denominator in this study. As well, this data contains census division level covariates such as average household size and median total income, which will be used in the study. Finally, geographic shapefiles of Canada by census division are also obtained through the [Statistics Canada 2016 census](https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/bound-limit-eng.cfm). 
+
+```{r data}
+#-----------------------
+## load data
+
+#---
+#- StatsCan shapefiles for Canada by Census Division
+Canada_census_divisions<- readOGR(dsn="data/StatsCan_shapefiles/2016_census_division_shapefiles",
+                                           layer="2016_census_divisions")
+# change IDs for SpatialPolygonsDataFrame to the CDUID's (for easier modeling with INLA)
+Canada_census_divisions<- spChFIDs(Canada_census_divisions, 
+                                   as.character(Canada_census_divisions$CDUID))
+# reorder SpatialPolygonsDataFrame by CDUID
+Canada_census_divisions<- Canada_census_divisions[order(Canada_census_divisions$CDUID),]
+#---
+
+# load combined EI data and Census Profile data that has been cleaned
+combined_data<- readRDS("data_processing/combined_data.rds")
+```
+
+```{r province_filter}
+#--------------------------------
+# filter for Saskatchewan
+Sask_census_divisions<- 
+  Canada_census_divisions[Canada_census_divisions@data$PRUID==47,] 
+
+combined_data<- combined_data %>% filter(PRUID==47)
+```
+
+```{r date_filter}
+#-----------------------------
+  # filter for REF DATE of 2021-01
+  # Allows for mapping of raw # EI beneficiaries per census division (single obs per census division)
+combined_data<- combined_data %>% filter(REF_DATE=="2021-01")
+```
+
+```{r adjacency_matrix}
+#----------------------
+## create adjacency matrix for census divisions
+
+# create object with neighbors/adjacencies for each census division (list elements are CDUIDs)
+nb.r<- poly2nb(Sask_census_divisions, queen=T)
+
+# create adjacency matrix for the census divisions (row/colnames are CDUID's)
+mat<- nb2mat(nb.r, style="B", zero.policy=TRUE)
+colnames(mat)<- rownames(mat)
+mat<- as.matrix(mat[1:dim(mat)[1], 1:dim(mat)[1]])
+
+# create graph file for use in model fitting with INLA
+nb2INLA(file = "census_divisions.graph", nb.r)
+```
+
+# Methods
+
+## 1) Mapping of Observed Proportions
+
+First, mapping of the observed proportions of individuals 15 years and older receiving EI benefits by census division in Saskatchewan in January 2021 is performed, as well as the standard error of these proportions. 
+
+## 2) Modelling
+
+Next, since the outcome of the proportion receiving EI benefits is not extremely rare (observed proportions range from 3% to 10% by census division, with an overall proportion of 6.2%), binomial models for the counts by census division are used to model the data.
+
+### 2a) Binomial Models for Pooled Counts in Census Divisions
+
+The first approach is to model the pooled counts (summed over sex / age-group stratum) by census division. Let $Y_{i}$ be the count of individuals receiving EI benefits for census division $i, i=1,...,n$. Let $N_{i}$ be the population of individuals in census division $i, i=1,...,n$. Then, the overall proportion is $\hat{p} = \frac{\sum_{i=1}^{n} Y_{i}}{\sum_{i=1}^{n} N_{i}}$, the observed proportion for census division $i$ is $\hat{p_{i}} = \frac{Y_{i}}{N_{i}}$, and the standard error of this proportion is $\hat{se}(\hat{p_{i}}) = \sqrt{\frac{\hat{p_{i}}(1-\hat{p_{i}})}{N_{i}}}$. The pooled counts by census division are then modeled in three ways. 
+
+```{r calc_pooled_quantities}
+#--------------------
+
+# calculate the overall proportion receiving EI benefits (total count / total pop)
+overall_prop<- sum(combined_data$EI_beneficiaries) / sum(combined_data$pop)
+
+# obtain pooled data (sum counts and pops over age-group/sex strata)
+combined_data_pooled<- combined_data %>%
+  select(-c(EI_Sex,EI_Age_group)) %>%
+  group_by(CDUID,REF_DATE) %>%
+  mutate(EI_beneficiaries= sum(EI_beneficiaries),
+         pop= sum(pop)) %>% 
+  ungroup() %>%
+  distinct()
+
+## calculate 
+  # observed proportion 
+  # std error of observed proportion
+combined_data_pooled<- combined_data_pooled %>%
+  mutate(prop= EI_beneficiaries / pop,
+         prop_std_err= sqrt(prop*(1-prop)/pop))
+```
+
+First, using only an iid random effect by census division as follows:
+
+$$Y_i|p_i \sim Binomial(N_i,p_i)$$
+$$logit(p_i)=\beta_0+e_i$$
+$$e_i \sim_\text{iid} N(0, \sigma_e^2)$$
+where:
+
+- $Y_i$ is the observed count of individuals at least 15 years old receiving EI benefits in census division i
+
+- $N_i$ is the population of individuals at least 15 years old in census division i
+
+- $p_i$ is the probability of receiving EI benefits for those at least 15 years old in census division i
+
+- $e_i$ is an unstructured spatial random effect for census division i
+
+```{r pooled_binomial_iid}
+#-----------------
+## Pooled Binomial Model with IID Random Effects
+pooled_binomial_iid<- inla(EI_beneficiaries ~ 1 + f(CDUID, model="iid"), 
+                           data= combined_data_pooled,
+                           family="binomial", 
+                           Ntrials=pop)
+
+# add posterior medians and posterior std devs of probabilities from Pooled Binomial IID model
+combined_data_pooled$bin_iid_med_prob<- pooled_binomial_iid$summary.fitted.values$`0.5quant`
+combined_data_pooled$bin_iid_std_dev_prob<- pooled_binomial_iid$summary.fitted.values$sd
+```
+
+Next, using an iid random effect for census division as well as a BYM2 spatial random effect as follows:
+
+$$Y_i|p_i \sim Binomial(N_i,p_i)$$
+$$logit(p_i)=\beta_0+e_i+S_i$$
+$$e_i \sim_\text{iid} N(0, \sigma_e^2)$$
+$$S_i|S_{j\in ne(i)} \sim ICAR(\sigma_s^2)$$
+where:
+
+- Same definitions as above, and in addition:
+
+- $S_i$ is an ICAR spatial random effect for census division i
+
+```{r pooled_binomial_bym2}
+#---------------------
+## Pooled Binomial Model with BYM2 Smoothing
+
+# BYM2 random effects smoothing (match on as.numeric(as.factor(CDUID)) in INLA)
+  # CDUID's were in alphabetical order in combined data
+pooled_binomial_bym2_formula<- 
+  EI_beneficiaries ~ 1 + f(as.numeric(as.factor(CDUID)), 
+                           model= "bym2", graph= "census_divisions.graph")
+pooled_binomial_bym2<- inla(pooled_binomial_bym2_formula, 
+                             data=combined_data_pooled,
+                             family="binomial",
+                             Ntrials=pop)
+
+# add posterior medians and posterior std devs of probabilities from Pooled Binomial BYM2 smoothed model
+combined_data_pooled$bin_bym2_med_prob<- pooled_binomial_bym2$summary.fitted.values$`0.5quant`
+combined_data_pooled$bin_bym2_std_dev_prob<- pooled_binomial_bym2$summary.fitted.values$sd
+```
+
+Lastly, also incorporating linear main effects for median age, average household size, and median total income by census division as follows:
+
+$$Y_i|p_i \sim Binomial(N_i,p_i)$$
+$$logit(p_i)=\beta_0+ \beta_1\text{med_age}_i + \beta_2\text{avg_household_size}_i + \beta_3\text{med_income}_i +e_i+S_i$$
+$$e_i \sim_\text{iid} N(0, \sigma_e^2)$$
+$$S_i|S_{j\in ne(i)} \sim ICAR(\sigma_s^2)$$
+where:
+
+- Same definitions as above, and in addition:
+
+- $\text{med_age}_i$ is the median age in census division i
+
+- $\text{avg_household_size}_i$ is the average household size in census division i
+
+- $\text{med_income}_i$ is the median total income in census division i
+
+```{r pooled_binomial_bym2_covariates}
+#-------------------------
+## Pooled Binomial BYM2 Smoothing with Covariates
+
+# BYM2 random effects smoothing with covariates (match on as.numeric(as.factor(CDUID)) in INLA)
+  # CDUID's were in alphabetical order in combined data
+pooled_binomial_bym2_covariates_formula<- 
+  EI_beneficiaries ~ 1 + pop_median_age + pop_avg_hh_size + I(pop_median_income/10000) +
+  f(as.numeric(as.factor(CDUID)), model= "bym2", graph= "census_divisions.graph")
+pooled_binomial_bym2_covariates<- inla(pooled_binomial_bym2_covariates_formula, 
+                      data=combined_data_pooled,
+                      family="binomial",
+                      Ntrials=pop)
+
+# add posterior medians and posterior std devs of prob's from Pooled Binomial BYM2 smoothed model with covariates
+combined_data_pooled$bin_bym2_covariates_med_prob<-
+  pooled_binomial_bym2_covariates$summary.fitted.values$`0.5quant`
+combined_data_pooled$bin_bym2_covariates_std_dev_prob<- 
+  pooled_binomial_bym2_covariates$summary.fitted.values$sd
+```
+
+### 2b) Binomial Models for Counts in Census Divisions- stratified by sex and age-group
+
+The second approach is to model the sex / age-group stratified counts by census division, in order to more finely model the data. Let $Y_{ij}$ be the count of individuals receiving EI benefits for census division $i, i=1,...,n$ and age-group/sex strata $j=1,...,6$ (age-groups of 15-24, 25-54, and 55+ years old, sexes of male and female). Let $N_{ij}$ be the population of individuals in census division $i, i=1,...,n$ and age-group/sex strata $j=1,...,6$. Then, the observed proportion in census division $i$ and age-group/sex strata $j$ is $\hat{p_{ij}} = \frac{Y_{ij}}{N_{ij}}$, and the standard error of this proportion is $\hat{se}(\hat{p_{ij}}) = \sqrt{\frac{\hat{p_{ij}}(1-\hat{p_{ij}})}{N_{ij}}}$. The stratified counts by census division are then modeled in three ways.
+
+```{r}
+# calculate observed proportions and std errs (by strata)
+combined_data<- combined_data %>%
+  mutate(prop= EI_beneficiaries/pop,
+         prop_std_err= sqrt(prop*(1-prop)/pop))
+```
+
+First, using only an iid random effect by census division as follows:
+
+$$Y_{ij}|p_{ij} \sim Binomial(N_{ij},p_{ij})$$
+$$
+\begin{aligned}
+logit(p_{ij})&=\beta_0 + \beta_1\text{1[male_strata]}_{ij} + \beta_2\text{1[25-54_years_strata]}_{ij} + \beta_3\text{1[55+years_strata]}_{ij} + e_i
+\end{aligned}
+$$
+$$e_i \sim_\text{iid} N(0, \sigma_e^2)$$
+where:
+
+- $Y_{ij}$ is the observed count of individuals at least 15 years old receiving EI benefits in census division i and age-sex stratum j
+
+- $N_{ij}$ is the population of individuals at least 15 years old in census division i and age-sex stratum j
+
+- $p_{ij}$ is the probability of receiving EI benefits for those at least 15 years old in census division i and age-sex stratum j
+
+- $\text{1[male_strata]}_{ij}$ is an indicator for the observation being a male-stratum
+ 
+- $\text{1[25-54_years_strata]}_{ij}$ is an indicator for the observation being in age-group 25-54 years-old stratum
+
+- $\text{1[55+years_strata]}_{ij}$ is an indicator for the observation being in age-group 55 years old and over stratum
+
+- $e_i$ is an unstructured spatial random effect for census division i
+
+```{r stratified_binomial_iid}
+#-------------------
+## Stratified Binomial Model- IID random effects
+stratified_binomial_iid<- inla(EI_beneficiaries ~ 1 + as.factor(EI_Sex) + as.factor(EI_Age_group) 
+                               + f(CDUID, model="iid"), 
+                           data= combined_data,
+                           family="binomial", 
+                           Ntrials=pop)
+
+# add posterior medians and posterior std devs of probabilities from Stratified Binomial IID model
+combined_data$bin_iid_med_prob<- stratified_binomial_iid$summary.fitted.values$`0.5quant`
+combined_data$bin_iid_std_dev_prob<- stratified_binomial_iid$summary.fitted.values$sd
+```
+
+Next, using an iid random effect for census division as well as a BYM2 spatial random effect as follows:
+
+$$Y_{ij}|p_{ij} \sim Binomial(N_{ij},p_{ij})$$
+$$
+\begin{aligned}
+logit(p_{ij})&=\beta_0 + \beta_1\text{1[male_strata]}_{ij} + \beta_2\text{1[25-54_years_strata]}_{ij} + \beta_3\text{1[55+years_strata]}_{ij} \\
+&+ e_i+S_i
+\end{aligned}
+$$
+$$e_i \sim_\text{iid} N(0, \sigma_e^2)$$
+$$S_i|S_{j\in ne(i)} \sim ICAR(\sigma_s^2)$$
+where:
+
+- Same definitions as above, and in addition:
+
+- $S_i$ is an ICAR spatial random effect for census division i
+
+```{r stratified_binomial_bym2}
+#-----------------
+## Stratified Binomial BYM2 Model
+
+# BYM2 random effects smoothing (match on as.numeric(as.factor(CDUID)) in INLA)
+  # CDUID's were in alphabetical order in combined data
+stratified_binomial_bym2_formula<- 
+  EI_beneficiaries ~ 1 + as.factor(EI_Sex) + as.factor(EI_Age_group) +
+  f(as.numeric(as.factor(CDUID)), model= "bym2", graph= "census_divisions.graph")
+stratified_binomial_bym2<- inla(stratified_binomial_bym2_formula, 
+                      data=combined_data,
+                      family="binomial",
+                      Ntrials=pop)
+
+# add posterior medians and posterior std devs of prob's from Stratified Binomial BYM2 Model
+combined_data$bin_bym2_med_prob<-
+  stratified_binomial_bym2$summary.fitted.values$`0.5quant`
+combined_data$bin_bym2_std_dev_prob<- 
+  stratified_binomial_bym2$summary.fitted.values$sd
+```
+
+Lastly, also incorporating linear main effects for average household size and median total income by census division as follows:
+
+$$Y_{ij}|p_{ij} \sim Binomial(N_{ij},p_{ij})$$
+$$
+\begin{aligned}
+logit(p_{ij})&=\beta_0 + \beta_1\text{1[male_strata]}_{ij} + \beta_2\text{1[25-54_years_strata]}_{ij} + \beta_3\text{1[55+years_strata]}_{ij} \\
+&+ \beta_4\text{avg_household_size}_i + \beta_5\text{med_income}_i +e_i+S_i
+\end{aligned}
+$$
+$$e_i \sim_\text{iid} N(0, \sigma_e^2)$$
+$$S_i|S_{j\in ne(i)} \sim ICAR(\sigma_s^2)$$
+where:
+
+- Same definitions as above, and in addition:
+
+- $\text{avg_household_size}_i$ is the average household size in census division i
+
+- $\text{med_income}_i$ is the median total income in census division i 
+
+```{r stratified_binomial_bym2_covariates}
+#-------------------------
+## Stratified Binomial BYM2 Model with Covariates
+
+# BYM2 random effects smoothing with covariates (match on as.numeric(as.factor(CDUID)) in INLA)
+  # CDUID's were in alphabetical order in combined data
+stratified_binomial_bym2_covariates_formula<- 
+  EI_beneficiaries ~ 1 + as.factor(EI_Sex) + as.factor(EI_Age_group) + pop_avg_hh_size + I(pop_median_income/10000) +
+  f(as.numeric(as.factor(CDUID)), model= "bym2", graph= "census_divisions.graph")
+stratified_binomial_bym2_covariates<- inla(stratified_binomial_bym2_covariates_formula, 
+                      data=combined_data,
+                      family="binomial",
+                      Ntrials=pop)
+
+# add posterior medians and posterior std devs of prob's from Stratified Binomial BYM2 Model with covariates
+combined_data$bin_bym2_covariates_med_prob<-
+  stratified_binomial_bym2_covariates$summary.fitted.values$`0.5quant`
+combined_data$bin_bym2_covariates_std_dev_prob<- 
+  stratified_binomial_bym2_covariates$summary.fitted.values$sd
+```
+
+# Results
+
+## 1) Mapping of Observed Proportions
+
+Below is the prevalence mapping for the proportion of individuals aged 15 years and older receiving employment insurance (EI) benefits by census division in Saskatchewan in January 2021. As well, the mapping of the standard errors of these proportions is mapped. The proportions range from about 3% to 10%, with higher proportions in the northern census divisions and the lowest proportions in the south-west. However, the standard error of the proportions varies greatly across census divisions. The standard errors of the proportions is highest in the northern and south-western census divisions, where population counts are lower. As well, the standard errors of the proportions are very small in the two census divisions containing the population centers of Saskatoon and Regina. 
+
+```{r}
+#---------------------------
+## Mapped Pooled Counts and Proportions
+
+# first make row names in combined data to be CDUID's (for matching)
+row.names(combined_data_pooled)<- combined_data_pooled$CDUID
+# create temp_map object by matching on row names (CDUID's)
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    combined_data_pooled,
+                                    match.ID = TRUE)
+
+# plot of proportion receiving EI benefits by census division
+p1<- spplot(temp_map, zcol="prop",
+       col.regions=brewer.pal(9, "Oranges"), cuts=8,
+       main="Observed Proportion of Individuals")
+
+# plot of std err of proportion receiving EI benefits by census division
+p2<- spplot(temp_map, zcol="prop_std_err",
+       col.regions=brewer.pal(9, "OrRd"), cuts=8,
+       main="Std Error of Proportion")
+
+grid.arrange(p1,p2,ncol=2,
+             top="EI Beneficiaries- Census Divisions in Saskatchewan")
+```
+
+## 2) Modelling
+  
+### 2a) Binomial Models for Pooled Counts in Census Divisions
+
+Below are the results from the binomial modelling of the pooled counts (summed across age-group/sex strata) of individuals receiving EI benefits by census division. First, a plot of the posterior median probabilities against the observed proportions by census division, for each of the three methods (iid random effects, adding spatial random effects, adding census division level covariates), are presented. It appears that there is only very minor shrinkage of the posterior median probabilities, occurring for the census divisions with the most extreme observed proportions and high standard errors. There is such little shrinkage since the high pooled population counts in the census divisions give rise to low standard errors of the observed pooled proportions.
+
+Next, maps of the posterior median probabilities from the three methods (iid random effects, adding spatial random effects, adding census division level covariates) are compared to the map of the observed proportions. There is very little difference in the prevalence mapping after modelling the pooled counts, again due to the low standard errors of the observed pooled proportions.
+
+These results show the need to model the counts stratified into age-group/sex strata, which will have higher standard errors of the stratified proportions given the lower population counts in each strata.
+
+```{r summary_pooled_models}
+#--------------------
+## Summary of Pooled Binomial Models for Counts
+
+# fixed and hyperparameters
+# pooled_binomial_iid$summary.fixed
+# pooled_binomial_iid$summary.hyperpar
+# pooled_binomial_bym2$summary.fixed
+# pooled_binomial_bym2$summary.hyperpar
+# pooled_binomial_bym2_covariates$summary.fixed
+# pooled_binomial_bym2_covariates$summary.hyperpar
+
+#check whether any shrinkage occurred
+p1<- ggplot(data=combined_data_pooled, aes(x=prop, y=bin_iid_med_prob)) + 
+  geom_point() +
+  geom_abline(intercept=0, slope=1, col="red") +
+  labs(title="IID Model",
+       x="Observed Proportion",
+       y="Posterior Median Probability") +
+  theme_bw()
+p2<- ggplot(data=combined_data_pooled, aes(x=prop, y=bin_bym2_med_prob)) + 
+  geom_point() +
+  geom_abline(intercept=0, slope=1, col="red") +
+  labs(title="BYM2 Model",
+       x="Observed Proportion",
+       y="Posterior Median Probability") +
+  theme_bw()
+p3<- ggplot(data=combined_data_pooled, aes(x=prop, y=bin_bym2_covariates_med_prob)) + 
+  geom_point() +
+  geom_abline(intercept=0, slope=1, col="red") +
+  labs(title="BYM2 + Covariates",
+       x="Observed Proportion",
+       y="Posterior Median Probability") +
+  theme_bw()
+grid.arrange(p1,p2,p3,ncol=3,
+             top="Shrinkage from Pooled Binomial Models for Counts")
+
+# mapping
+row.names(combined_data_pooled)<- combined_data_pooled$CDUID
+# match this to the SpatialPolygonsDataFrame
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions, 
+                                    combined_data_pooled,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_iid_med_prob",
+                        "bin_bym2_med_prob","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportion", "IID", "BYM2", "BYM2 + Covariates"),
+       col.regions=brewer.pal(9, "Purples"), cuts=8,
+       main="Pooled Binomial Models- Posteior Median Probabilities of EI Beneficiares")
+```
+
+
+### 2b) Binomial Models for Counts in Census Divisions- stratified by sex and age-group
+
+Below are the results from the binomial modelling of the age-group/sex strata counts of individuals receiving EI benefits by census division (age groups of 15-24 years old, 25-54 years old, 55+ years old, and sexes of males and females).
+
+First, tables of the posterior medians of the hyperparameters and the fixed effects on the log-odds scale are presented for each of the three methods (iid random effects, adding spatial random effects, adding census division level covariates). The posterior median for the precision of the residual variance is the highest of the models at 38.2 from the Binomial Model with BYM2 random effects and census division level covariates (95% credible interval of 17.3 to 77.6). The posterior median for the proportion of the total variance attributed to the spatial random effect is lower after adding in the census division level covariates of average household size and median income, reduced from 0.870 (95% credible interval of 0.282 to 0.998) to 0.495 (with a 95% credible interval of 0.045 to 0.962). Based on the Binomial Model with BYM2 random effects and census division level covariates, the odds of receiving EI benefits is 23.3% higher for a census division stratum of males compared to one of females of the same age-group, average household size, and median income (95% credible interval of 21.2% to 25.5% higher). The odds of receiving EI benefits is 53.0% higher for a census division stratum of 25-54 year-olds compared to one of 15-24 year-olds of the same sex, average household size, and median income (95% credible interval of 49.2% to 57.0% higher). The odds of receiving EI benefits is 37.7% lower for a census division stratum of 55 and over year-olds compared to one of 15-24 year-olds of the same sex, average household size, and median income (95% credible interval of 39.6% to 35.8% lower). The odds of receiving EI benefits is 55.9% higher for a census division stratum with average household size of 1 higher, but of the same age-group, sex, and median income (95% credible interval of 11.0% to 120% higher). The odds of receiving EI benefits is 0.5% higher for a census division stratum with median income $10,000 higher, but of the same age-group, sex, and average household size (95% credible interval of 16.1% lower to 20.3% higher).
+
+Next, a plot of the posterior median probabilities against the observed proportions for each age-group/sex stratum by census division, for each of the three methods (iid random effects, adding spatial random effects, adding census division level covariates), are presented. It appears that there is more shrinkage in the stratified binomial models than in the pooled binomial models for counts.
+
+```{r summary_stratified_models}
+#--------------------
+## Summary of Stratified Binomial Models for Counts
+
+# summary of fixed and hyperparameters
+stratified_iid_table<- rbind(
+  stratified_binomial_iid$summary.hyperpar[,3:5],
+  stratified_binomial_iid$summary.fixed[,3:5]
+) 
+stratified_bym2_table<- rbind(
+  stratified_binomial_bym2$summary.hyperpar[,3:5],
+  stratified_binomial_bym2$summary.fixed[,3:5]
+) 
+stratified_bym2_covariates_table<- rbind(
+  stratified_binomial_bym2_covariates$summary.hyperpar[,3:5],
+  stratified_binomial_bym2_covariates$summary.fixed[,3:5]
+) 
+kable(stratified_iid_table,
+      format="html",
+      digits=4,
+      caption="Stratified Binomial IID Model",
+      col.names=c("2.5th Quantile", "Median", "97.5th Quantile")) %>%
+  kable_styling(bootstrap_options= c("striped", "bordered"),
+                position="center",
+                full_width = FALSE)
+kable(stratified_bym2_table,
+      format="html",
+      digits=4,
+      caption="Stratified Binomial BYM2 Model",
+      col.names=c("2.5th Quantile", "Median", "97.5th Quantile")) %>%
+  kable_styling(bootstrap_options= c("striped", "bordered"),
+                position="center",
+                full_width = FALSE)
+kable(stratified_bym2_covariates_table,
+      format="html",
+      digits=4,
+      caption="Stratified Binomial BYM2 Model with Covariates",
+      col.names=c("2.5th Quantile", "Median", "97.5th Quantile")) %>%
+  kable_styling(bootstrap_options= c("striped", "bordered"),
+                position="center",
+                full_width = FALSE)
+
+#check whether any shrinkage occurred
+p1<- ggplot(data=combined_data, aes(x=prop, y=bin_iid_med_prob)) + 
+  geom_point() +
+  geom_abline(intercept=0, slope=1, col="red") +
+  labs(title="IID Model",
+       x="Observed Proportion",
+       y="Posterior Median Probability") +
+  theme_bw()
+p2<- ggplot(data=combined_data, aes(x=prop, y=bin_bym2_med_prob)) + 
+  geom_point() +
+  geom_abline(intercept=0, slope=1, col="red") +
+  labs(title="BYM2 Model",
+       x="Observed Proportion",
+       y="Posterior Median Probability") +
+  theme_bw()
+p3<- ggplot(data=combined_data, aes(x=prop, y=bin_bym2_covariates_med_prob)) + 
+  geom_point() +
+  geom_abline(intercept=0, slope=1, col="red") +
+  labs(title="BYM2 + Covariates",
+       x="Observed Proportion",
+       y="Posterior Median Probability") +
+  theme_bw()
+grid.arrange(p1,p2,p3,ncol=3,
+             top="Shrinkage from Stratified Binomial Models for Counts")
+```
+
+Lastly, maps of the posterior median probabilities from the stratified binomial BYM2 model with covariates are compared to the maps of the observed proportions for each age-group/sex stratum.
+
+For both males 15-24 years old and females 15-24 years old, the posterior median probabilities are decreased greatly in most of the central census divisions and increased greatly in the northern-most and north-western-most compared to the observed proportions. For males 25-54 years old, the posterior median probabilities are increased slightly in the central census divisions and reduced greatly in the northern-most compared to the observed proportions. For females 25-54 years old, the overall spatial pattern of the posterior median probabilities remains largely unchanged compared to the observed proportions, with a increase in the northern-most census division. For males 55 years and over, the posterior median probabilities are decreased in the northern census divisions compared to the observed proportions. For females 55 years and over, the overall spatial pattern of the posterior median probabilities remains largely unchanged compared to the observed proportions, with a slight increase in the central census divisions.
+```{r males_15_24}
+#----
+# mapping males 15-24
+temp_data<- combined_data %>%
+  filter(EI_Sex=="Males",EI_Age_group=="15 to 24 years")
+
+row.names(temp_data)<- temp_data$CDUID
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    temp_data,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportions","Posterior Med Probs"),
+       col.regions=brewer.pal(9,"Purples"), cuts=8,
+       main="Males 15 - 24 Years")
+```
+
+```{r females_15_24}
+#----
+# mapping females 15-24
+temp_data<- combined_data %>%
+  filter(EI_Sex=="Females",EI_Age_group=="15 to 24 years")
+
+row.names(temp_data)<- temp_data$CDUID
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    temp_data,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportions","Posterior Med Probs"),
+       col.regions=brewer.pal(9,"Purples"), cuts=8,
+       main="Females 15 - 24 Years")
+```
+
+```{r males_25_54}
+#----
+# mapping males 25-54
+temp_data<- combined_data %>%
+  filter(EI_Sex=="Males",EI_Age_group=="25 to 54 years")
+
+row.names(temp_data)<- temp_data$CDUID
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    temp_data,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportions","Posterior Med Probs"),
+       col.regions=brewer.pal(9,"Purples"), cuts=8,
+       main="Males 25 - 54 Years")
+```
+
+```{r females_25_54}
+#----
+# mapping females 25-54
+temp_data<- combined_data %>%
+  filter(EI_Sex=="Females",EI_Age_group=="25 to 54 years")
+
+row.names(temp_data)<- temp_data$CDUID
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    temp_data,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportions","Posterior Med Probs"),
+       col.regions=brewer.pal(9,"Purples"), cuts=8,
+       main="Females 25 - 54 Years")
+```
+
+```{r males_55_over}
+#----
+# mapping males 55+
+temp_data<- combined_data %>%
+  filter(EI_Sex=="Males",EI_Age_group=="55 years and over")
+
+row.names(temp_data)<- temp_data$CDUID
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    temp_data,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportions","Posterior Med Probs"),
+       col.regions=brewer.pal(9,"Purples"), cuts=8,
+       main="Males 55 Years and Over")
+```
+
+```{r females_55_over}
+#----
+# mapping females 55+
+temp_data<- combined_data %>%
+  filter(EI_Sex=="Females",EI_Age_group=="55 years and over")
+
+row.names(temp_data)<- temp_data$CDUID
+temp_map<- SpatialPolygonsDataFrame(Sask_census_divisions,
+                                    temp_data,
+                                    match.ID=TRUE)
+
+spplot(temp_map, zcol=c("prop","bin_bym2_covariates_med_prob"),
+       names.attr=c("Observed Proportions","Posterior Med Probs"),
+       col.regions=brewer.pal(9,"Purples"), cuts=8,
+       main="Females 55 Years and Over")
+```
+
+
+# Discussion
+
+This study has shown that the proportion receiving employment insurance benefits varies greatly within the census divisions of Saskatchewan in January 2021, with the highest proportions in the northern regions and the lowest proportions in the south-western regions. As well, the proportion varies by census division strata of sex and age-group, with male strata having higher odds than females, 25-54 year-old strata having higher odds than 15-24 year old strata, and 55+ year-old strata having lower odds than 15-24 year old strata. Lastly, census division strata with higher average household size were found to have higher odds of receiving EI benefits. This suggests which populations were more affected by government restriction closures during the second wave of the COVID-19 pandemic in January 2021.
+
+There are several limitations to this study that should be noted. First, the study data only considers individuals receiving EI benefits, not those who could qualify but don't apply or those that don't qualify. Therefore, the counts of individuals who were affected by government restriction closures are likely underestimated. Second, the study uses the 2016 Statistics Canada Census for the underlying population counts by census division, as well as the census division level covariates. These values are likely to have changed since 2016. 
+
+As well, there are many more possible confounding variables that were not included in the analysis that could reduce the residual spatial variation, such as race breakdown by census division. Another consideration for future studies is to expand to other provinces in Canada to see if the conclusions found differ by province. Lastly, it would be very interesting to perform space-time modelling to see how the proportion receiving EI benefits changed through the months of the COVID-19 pandemic.
+
+# Code Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
+
+

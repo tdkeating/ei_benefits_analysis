@@ -1,0 +1,294 @@
+﻿Geo Code,Geo Name,Line Number
+"1001","Division No. 1",2
+"1002","Division No. 2",2249
+"1003","Division No. 3",4496
+"1004","Division No. 4",6743
+"1005","Division No. 5",8990
+"1006","Division No. 6",11237
+"1007","Division No. 7",13484
+"1008","Division No. 8",15731
+"1009","Division No. 9",17978
+"1010","Division No. 10",20225
+"1011","Division No. 11",22472
+"1101","Kings",24719
+"1102","Queens",26966
+"1103","Prince",29213
+"1201","Shelburne",31460
+"1202","Yarmouth",33707
+"1203","Digby",35954
+"1204","Queens",38201
+"1205","Annapolis",40448
+"1206","Lunenburg",42695
+"1207","Kings",44942
+"1208","Hants",47189
+"1209","Halifax",49436
+"1210","Colchester",51683
+"1211","Cumberland",53930
+"1212","Pictou",56177
+"1213","Guysborough",58424
+"1214","Antigonish",60671
+"1215","Inverness",62918
+"1216","Richmond",65165
+"1217","Cape Breton",67412
+"1218","Victoria",69659
+"1301","Saint John",71906
+"1302","Charlotte",74153
+"1303","Sunbury",76400
+"1304","Queens",78647
+"1305","Kings",80894
+"1306","Albert",83141
+"1307","Westmorland",85388
+"1308","Kent",87635
+"1309","Northumberland",89882
+"1310","York",92129
+"1311","Carleton",94376
+"1312","Victoria",96623
+"1313","Madawaska",98870
+"1314","Restigouche",101117
+"1315","Gloucester",103364
+"2401","Les Îles-de-la-Madeleine",105611
+"2402","Le Rocher-Percé",107858
+"2403","La Côte-de-Gaspé",110105
+"2404","La Haute-Gaspésie",112352
+"2405","Bonaventure",114599
+"2406","Avignon",116846
+"2407","La Matapédia",119093
+"2408","Matane",121340
+"2409","La Mitis",123587
+"2410","Rimouski-Neigette",125834
+"2411","Les Basques",128081
+"2412","Rivière-du-Loup",130328
+"2413","Témiscouata",132575
+"2414","Kamouraska",134822
+"2415","Charlevoix-Est",137069
+"2416","Charlevoix",139316
+"2417","L'Islet",141563
+"2418","Montmagny",143810
+"2419","Bellechasse",146057
+"2420","L'Île-d'Orléans",148304
+"2421","La Côte-de-Beaupré",150551
+"2422","La Jacques-Cartier",152798
+"2423","Québec",155045
+"2425","Lévis",157292
+"2426","La Nouvelle-Beauce",159539
+"2427","Robert-Cliche",161786
+"2428","Les Etchemins",164033
+"2429","Beauce-Sartigan",166280
+"2430","Le Granit",168527
+"2431","Les Appalaches",170774
+"2432","L'Érable",173021
+"2433","Lotbinière",175268
+"2434","Portneuf",177515
+"2435","Mékinac",179762
+"2436","Shawinigan",182009
+"2437","Francheville",184256
+"2438","Bécancour",186503
+"2439","Arthabaska",188750
+"2440","Les Sources",190997
+"2441","Le Haut-Saint-François",193244
+"2442","Le Val-Saint-François",195491
+"2443","Sherbrooke",197738
+"2444","Coaticook",199985
+"2445","Memphrémagog",202232
+"2446","Brome-Missisquoi",204479
+"2447","La Haute-Yamaska",206726
+"2448","Acton",208973
+"2449","Drummond",211220
+"2450","Nicolet-Yamaska",213467
+"2451","Maskinongé",215714
+"2452","D'Autray",217961
+"2453","Pierre-De Saurel",220208
+"2454","Les Maskoutains",222455
+"2455","Rouville",224702
+"2456","Le Haut-Richelieu",226949
+"2457","La Vallée-du-Richelieu",229196
+"2458","Longueuil",231443
+"2459","Marguerite-D'Youville",233690
+"2460","L'Assomption",235937
+"2461","Joliette",238184
+"2462","Matawinie",240431
+"2463","Montcalm",242678
+"2464","Les Moulins",244925
+"2465","Laval",247172
+"2466","Montréal",249419
+"2467","Roussillon",251666
+"2468","Les Jardins-de-Napierville",253913
+"2469","Le Haut-Saint-Laurent",256160
+"2470","Beauharnois-Salaberry",258407
+"2471","Vaudreuil-Soulanges",260654
+"2472","Deux-Montagnes",262901
+"2473","Thérèse-De Blainville",265148
+"2474","Mirabel",267395
+"2475","La Rivière-du-Nord",269642
+"2476","Argenteuil",271889
+"2477","Les Pays-d'en-Haut",274136
+"2478","Les Laurentides",276383
+"2479","Antoine-Labelle",278630
+"2480","Papineau",280877
+"2481","Gatineau",283124
+"2482","Les Collines-de-l'Outaouais",285371
+"2483","La Vallée-de-la-Gatineau",287618
+"2484","Pontiac",289865
+"2485","Témiscamingue",292112
+"2486","Rouyn-Noranda",294359
+"2487","Abitibi-Ouest",296606
+"2488","Abitibi",298853
+"2489","La Vallée-de-l'Or",301100
+"2490","La Tuque",303347
+"2491","Le Domaine-du-Roy",305594
+"2492","Maria-Chapdelaine",307841
+"2493","Lac-Saint-Jean-Est",310088
+"2494","Le Saguenay-et-son-Fjord",312335
+"2495","La Haute-Côte-Nord",314582
+"2496","Manicouagan",316829
+"2497","Sept-Rivières--Caniapiscau",319076
+"2498","Minganie--Le Golfe-du-Saint-Laurent",321323
+"2499","Nord-du-Québec",323570
+"3501","Stormont, Dundas and Glengarry",325817
+"3502","Prescott and Russell",328064
+"3506","Ottawa",330311
+"3507","Leeds and Grenville",332558
+"3509","Lanark",334805
+"3510","Frontenac",337052
+"3511","Lennox and Addington",339299
+"3512","Hastings",341546
+"3513","Prince Edward",343793
+"3514","Northumberland",346040
+"3515","Peterborough",348287
+"3516","Kawartha Lakes",350534
+"3518","Durham",352781
+"3519","York",355028
+"3520","Toronto",357275
+"3521","Peel",359522
+"3522","Dufferin",361769
+"3523","Wellington",364016
+"3524","Halton",366263
+"3525","Hamilton",368510
+"3526","Niagara",370757
+"3528","Haldimand-Norfolk",373004
+"3529","Brant",375251
+"3530","Waterloo",377498
+"3531","Perth",379745
+"3532","Oxford",381992
+"3534","Elgin",384239
+"3536","Chatham-Kent",386486
+"3537","Essex",388733
+"3538","Lambton",390980
+"3539","Middlesex",393227
+"3540","Huron",395474
+"3541","Bruce",397721
+"3542","Grey",399968
+"3543","Simcoe",402215
+"3544","Muskoka",404462
+"3546","Haliburton",406709
+"3547","Renfrew",408956
+"3548","Nipissing",411203
+"3549","Parry Sound",413450
+"3551","Manitoulin",415697
+"3552","Sudbury",417944
+"3553","Greater Sudbury / Grand Sudbury",420191
+"3554","Timiskaming",422438
+"3556","Cochrane",424685
+"3557","Algoma",426932
+"3558","Thunder Bay",429179
+"3559","Rainy River",431426
+"3560","Kenora",433673
+"4601","Division No. 1",435920
+"4602","Division No. 2",438167
+"4603","Division No. 3",440414
+"4604","Division No. 4",442661
+"4605","Division No. 5",444908
+"4606","Division No. 6",447155
+"4607","Division No. 7",449402
+"4608","Division No. 8",451649
+"4609","Division No. 9",453896
+"4610","Division No. 10",456143
+"4611","Division No. 11",458390
+"4612","Division No. 12",460637
+"4613","Division No. 13",462884
+"4614","Division No. 14",465131
+"4615","Division No. 15",467378
+"4616","Division No. 16",469625
+"4617","Division No. 17",471872
+"4618","Division No. 18",474119
+"4619","Division No. 19",476366
+"4620","Division No. 20",478613
+"4621","Division No. 21",480860
+"4622","Division No. 22",483107
+"4623","Division No. 23",485354
+"4701","Division No. 1",487601
+"4702","Division No. 2",489848
+"4703","Division No. 3",492095
+"4704","Division No. 4",494342
+"4705","Division No. 5",496589
+"4706","Division No. 6",498836
+"4707","Division No. 7",501083
+"4708","Division No. 8",503330
+"4709","Division No. 9",505577
+"4710","Division No. 10",507824
+"4711","Division No. 11",510071
+"4712","Division No. 12",512318
+"4713","Division No. 13",514565
+"4714","Division No. 14",516812
+"4715","Division No. 15",519059
+"4716","Division No. 16",521306
+"4717","Division No. 17",523553
+"4718","Division No. 18",525800
+"4801","Division No. 1",528047
+"4802","Division No. 2",530294
+"4803","Division No. 3",532541
+"4804","Division No. 4",534788
+"4805","Division No. 5",537035
+"4806","Division No. 6",539282
+"4807","Division No. 7",541529
+"4808","Division No. 8",543776
+"4809","Division No. 9",546023
+"4810","Division No. 10",548270
+"4811","Division No. 11",550517
+"4812","Division No. 12",552764
+"4813","Division No. 13",555011
+"4814","Division No. 14",557258
+"4815","Division No. 15",559505
+"4816","Division No. 16",561752
+"4817","Division No. 17",563999
+"4818","Division No. 18",566246
+"4819","Division No. 19",568493
+"5901","East Kootenay",570740
+"5903","Central Kootenay",572987
+"5905","Kootenay Boundary",575234
+"5907","Okanagan-Similkameen",577481
+"5909","Fraser Valley",579728
+"5915","Greater Vancouver",581975
+"5917","Capital",584222
+"5919","Cowichan Valley",586469
+"5921","Nanaimo",588716
+"5923","Alberni-Clayoquot",590963
+"5924","Strathcona",593210
+"5926","Comox Valley",595457
+"5927","Powell River",597704
+"5929","Sunshine Coast",599951
+"5931","Squamish-Lillooet",602198
+"5933","Thompson-Nicola",604445
+"5935","Central Okanagan",606692
+"5937","North Okanagan",608939
+"5939","Columbia-Shuswap",611186
+"5941","Cariboo",613433
+"5943","Mount Waddington",615680
+"5945","Central Coast",617927
+"5947","Skeena-Queen Charlotte",620174
+"5949","Kitimat-Stikine",622421
+"5951","Bulkley-Nechako",624668
+"5953","Fraser-Fort George",626915
+"5955","Peace River",629162
+"5957","Stikine",631409
+"5959","Northern Rockies",633656
+"6001","Yukon",635903
+"6101","Region 1",638150
+"6102","Region 2",640397
+"6103","Region 3",642644
+"6104","Region 4",644891
+"6105","Region 5",647138
+"6106","Region 6",649385
+"6204","Baffin",651632
+"6205","Keewatin",653879
+"6208","Kitikmeot",656126
