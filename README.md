@@ -30,7 +30,7 @@ Contains the following data:
 
 ### ei_spatial_mapping_report.Rmd
 
-- code used to run prevalence mapping and spatial regression on EI data
+- code used to run prevalence mapping and spatial regression using `combined_data.rds` and geographic shapefiles
 
 ### ei_spatial_mapping_report.html
 
