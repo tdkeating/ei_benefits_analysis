@@ -13,7 +13,7 @@
 ##        Used underlying population by census division from 2016 census throughout.
 ##        Beware: population by census division may have changed from 2016-2021 (and within 2021)
 
-setwd("~/Documents/University of Washington/Classes/Second Year Classes/Winter 2022/BIOST 555/Course Project/data_processing")
+setwd("~/Documents/GitHub/ei_benefits_analysis/data_processing")
 library(tidyverse)
 
 #-----------------------------

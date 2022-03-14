@@ -10,7 +10,7 @@
 ##
 ## Notes: Analysis will be performed at census division level
 
-setwd("~/Documents/University of Washington/Classes/Second Year Classes/Winter 2022/BIOST 555/Course Project/data_processing")
+setwd("~/Documents/GitHub/ei_benefits_analysis/data_processing")
 library(tidyverse)
 
 #---------------------------------
