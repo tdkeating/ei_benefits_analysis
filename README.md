@@ -20,6 +20,8 @@ Contains the following data:
 
 ### data_processing
 
+Contains the following data pre-processing scripts:
+
 - `clean_id_data.R` loads employment insurance count data and obtain EI benefits count by month, census division, age group, and sex. Then write to `ei_data.rds`.
 - `clean_census_profile_data.R` loads StatsCan 2016 census data and obtain population counts of age groups (15-19,...,60-64,65+) and sexes (male,female) by census division, obtain other covariates of interest by census division. Then write to `census_profile_data.rds`.
 - `combining_ei_census_profile_data.R` adds census profile population and covariate data by census division to EI data for analysis. Then write to `combined_data.rds`.
