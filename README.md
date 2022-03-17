@@ -11,7 +11,7 @@ This code is used to perform prevalence mapping of the proportion of individuals
 
 ### data
 
-Contains the following data:
+Contains the following:
 
 - employment insurance count data by census division, stratified by age-group and sex, from  [Statistics Canada- Employment Insurance Statistics (EIS)](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410032301)
 - population count data by census division and census division level covariate data from [2016 Statistics Canada Census](https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/details/page.cfm?Lang=E&Geo1=PR&Code1=01&Geo2=PR&Code2=01&Data=Count&SearchText=01&SearchType=Begins&SearchPR=01&B1=All&Custom=&TABID=3)
