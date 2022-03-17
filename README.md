@@ -18,7 +18,7 @@ Contains the following data:
 - hierarchical geographic structure in Canada from [Standard Geographic Classification (SGC) 2016 Classification- Statistics Canada](https://www.statcan.gc.ca/en/subjects/standard/sgc/2016/index)
 - Statistics Canada [geographic shapefiles by census division](https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/bound-limit-eng.cfm)
 
-### data_preprocessing
+### data_processing
 
 - `clean_id_data.R` loads employment insurance count data and obtain EI benefits count by month, census division, age group, and sex. Then write to `ei_data.rds`.
 - `clean_census_profile_data.R` loads StatsCan 2016 census data and obtain population counts of age groups (15-19,...,60-64,65+) and sexes (male,female) by census division, obtain other covariates of interest by census division. Then write to `census_profile_data.rds`.
