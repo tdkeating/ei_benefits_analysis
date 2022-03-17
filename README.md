@@ -14,7 +14,7 @@ This code is used to perform prevalence mapping of the proportion of individuals
 Contains the following data:
 
 - employment insurance count data by census division, stratified by age-group and sex, from  [Statistics Canada- Employment Insurance Statistics (EIS)](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410032301)
-- population count data by census division and census division covariate level data from [2016 Statistics Canada Census](https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/details/page.cfm?Lang=E&Geo1=PR&Code1=01&Geo2=PR&Code2=01&Data=Count&SearchText=01&SearchType=Begins&SearchPR=01&B1=All&Custom=&TABID=3)
+- population count data by census division and census division level covariate data from [2016 Statistics Canada Census](https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/details/page.cfm?Lang=E&Geo1=PR&Code1=01&Geo2=PR&Code2=01&Data=Count&SearchText=01&SearchType=Begins&SearchPR=01&B1=All&Custom=&TABID=3)
 - hierarchical geographic structure in Canada from [Standard Geographic Classification (SGC) 2016 Classification- Statistics Canada!](https://www.statcan.gc.ca/en/subjects/standard/sgc/2016/index)
 - Statistics Canada [geographic shapefiles by census division](https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/bound-limit-eng.cfm)
 
