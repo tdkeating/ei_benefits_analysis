@@ -43,7 +43,7 @@ Contains the following data pre-processing scripts:
 
 ### ei_spatial_mapping_report.Rmd
 
-- code used to run prevalence mapping and spatial regression using `combined_data.rds` and geographic shapefiles
+- code used to run prevalence mapping and spatial regression using `combined_data.rds` and geographic shapefiles (`data/StatsCan_shapefiles/2016_census_division_shapefiles`)
 
 ### ei_spatial_mapping_report.html
 
