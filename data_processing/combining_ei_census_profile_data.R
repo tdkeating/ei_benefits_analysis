@@ -1,9 +1,10 @@
 ## Script name: combining_ei_census_profile_data.R
 ##
 ## Purpose of script: Add census profile population and covariate data by census division to EI data for analysis.
-##        1) Load Cleaned EI and census profile data
+##        1) Load Cleaned EI (ei_data.rds) and census profile data (census_profile_data.rds)
 ##        2) Add Population data by age group, sex, and census division to EI data
 ##        3) Add Covariate data by census division to EI data
+##        4) Write to combined_data.rds
 ##
 ## Author: Taylor Keating
 ##

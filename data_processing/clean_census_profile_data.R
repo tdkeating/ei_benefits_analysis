@@ -1,8 +1,10 @@
 ## Script name: clean_census_profile_data.R
 ##
 ## Purpose of script: clean Census Profile 2016 data for use for spatial analysis
+##    1) Load raw StatsCan Census Profile 2016 data (Census_division_profile_2016.csv)
 ##      - obtain population counts of age groups (15-19,...,60-64,65+) and sexes (male,female) by census division
 ##      - obtain other covariates of interest by census division
+##    2) Write to census_profile_data.rds
 ##
 ## Author: Taylor Keating
 ##

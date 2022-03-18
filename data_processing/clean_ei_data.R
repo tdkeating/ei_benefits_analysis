@@ -1,8 +1,8 @@
 ## Script name: clean_ei_data.R
 ##
 ## Purpose of script: clean Employment Insurance beneficiaries data for use for spatial analysis
-##      1) Load StatsCan Standard Geographic Classification (SGC) Structure 2016
-##      2) Load and Clean EI Data
+##      1) Load StatsCan Standard Geographic Classification (SGC) Structure 2016 (SGC-CGT-2016-Structure-eng.csv)
+##      2) Load and Clean raw EI Data (14100323.csv)
 ##             - obtain Census division names by matching CDUID with SGC Structure 2016
 ##             - obtain EI benefits count by month, census division, age group, and sex
 ##      3) Filter EI data
@@ -10,6 +10,7 @@
 ##             - All types of income benefits (total counts with no sub-sets)
 ##             - Males/Females counts
 ##             - Age group counts (15-24yrs, 25-54yrs, 55+years)
+##      4) Write to ei_data.rds
 ##
 ## Author: Taylor Keating
 ##
