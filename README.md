@@ -5,7 +5,7 @@ This project is based on data from [Statistics Canada- Employment Insurance Stat
 
 ## Purpose
 
-This code is used to perform prevalence mapping of the proportion of individuals at least 15 years old receiving employment insurance benefits in Canada, as well as perform spatial regression on this data.
+This code is used to perform prevalence mapping of the proportion of individuals at least 15 years old receiving employment insurance benefits in Canada. As well, to perform spatial regression on this data, to determine whether the proportion receiving EI benefits varies by the make-up of census divisions.
 
 ## Files/Folders
 
